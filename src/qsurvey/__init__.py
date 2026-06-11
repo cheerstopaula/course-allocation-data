@@ -302,6 +302,9 @@ class QSurvey:
     ):
         course, _, _, section = features
 
+        time_constr = self.course_time_constr(features, schedule, sparse)
+        sect_constr = self.course_sect_constr(features, schedule, sparse)
+
         students = []
         responses = []
         statuses = []
@@ -326,10 +329,7 @@ class QSurvey:
                 total_num_courses,
                 course,
                 section,
-                [
-                    self.course_time_constr(features, schedule, sparse),
-                    self.course_sect_constr(features, schedule, sparse),
-                ],
+                [time_constr, sect_constr],
                 schedule,
                 sparse=sparse,
             )
