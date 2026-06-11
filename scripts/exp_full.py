@@ -2,27 +2,28 @@ import numpy as np
 import pandas as pd
 import time
 import os
-import random
 
 from fair.stats.survey import Corpus, SingleTopicSurvey
 from fair.agent import LegacyStudent
 from fair.allocation import (
-    general_yankee_swap_E,
+    yankee_swap,
     round_robin,
     serial_dictatorship,
     integer_linear_program,
 )
-from fair.metrics import nash_welfare, first_preference_count
-from fair.envy import EF_violations_reponses
+from fair.welfare_metrics import (
+    utilitarian_welfare,
+    nash_welfare,
+    first_preference_count,
+)
+from fair.fairness_metrics import (
+    EF_violations_responses,
+    EF1_violations_responses,
+    PMMS_violations_responses,
+)
 import qsurvey
 
-# --- FORCE REPRODUCIBILITY ---
-GLOBAL_SEED = 0
-
-os.environ["PYTHONHASHSEED"] = str(GLOBAL_SEED)
-random.seed(GLOBAL_SEED)
-np.random.seed(GLOBAL_SEED)
-# -----------------------------
+os.environ["PYTHONHASHSEED"] = "0"
 
 
 def add_experiment_result(
@@ -36,13 +37,56 @@ def add_experiment_result(
     c,
     csv_file_path,
 ):
-    current_utilities = np.diag(np.dot(c, X))
-    USW = sum(current_utilities)
+    USW = utilitarian_welfare(X, students, schedule, valuations=c)
     seats = sum(sum(X)[:NUM_STUDENTS])
-    zeros, nash = nash_welfare(X, students, schedule, current_utilities)
+    zeros, nash = nash_welfare(X, students, schedule, valuations=c)
     first_count = first_preference_count(X, c)
-    total_envy, status_envy, downward_envy, _ = EF_violations_reponses(
-        X, students, schedule, student_status_map, c
+    (
+        total_envy,
+        num_envious,
+        status_envy,
+        num_status_envious,
+        downward_envy,
+        num_downward_envious,
+        EF_matrix,
+        memo,
+    ) = EF_violations_responses(
+        X, students, schedule, valuations=c, student_status_map=student_status_map
+    )
+    (
+        total_ef1,
+        num_ef1_envious,
+        status_ef1,
+        num_status_ef1_envious,
+        downward_ef1,
+        num_downward_ef1_envious,
+        _,
+        _,
+    ) = EF1_violations_responses(
+        X,
+        students,
+        schedule,
+        valuations=c,
+        student_status_map=student_status_map,
+        EF_matrix=EF_matrix,
+        memo=memo,
+    )
+    (
+        total_pmms,
+        num_pmms_envious,
+        status_pmms,
+        num_status_pmms,
+        downward_pmms,
+        num_downward_pmms,
+        _,
+    ) = PMMS_violations_responses(
+        X,
+        students,
+        schedule,
+        valuations=c,
+        student_status_map=student_status_map,
+        EF_matrix=EF_matrix,
+        memo=memo,
     )
 
     file_exists = os.path.isfile(csv_file_path)
@@ -58,8 +102,23 @@ def add_experiment_result(
             "nash": [nash],
             "first": [first_count],
             "total_envy": [total_envy],
+            "num_envious": [num_envious],
             "status_envy": [status_envy],
+            "num_status_envious": [num_status_envious],
             "downward_envy": [downward_envy],
+            "num_downward_envious": [num_downward_envious],
+            "total_ef1": [total_ef1],
+            "num_ef1_envious": [num_ef1_envious],
+            "status_ef1": [status_ef1],
+            "num_status_ef1_envious": [num_status_ef1_envious],
+            "downward_ef1": [downward_ef1],
+            "num_downward_ef1_envious": [num_downward_ef1_envious],
+            "total_pmms": [total_pmms],
+            "num_pmms_envious": [num_pmms_envious],
+            "status_pmms": [status_pmms],
+            "num_status_pmms": [num_status_pmms],
+            "downward_pmms": [downward_pmms],
+            "num_downward_pmms": [num_downward_pmms],
             "runtime": [runtime],
         }
     )
@@ -75,8 +134,6 @@ NUM_SUB_KERNELS = 3
 SAMPLE_PER_STUDENT = 10
 SPARSE = False
 PLOT = True
-seed = 0
-RNG = np.random.default_rng(seed)
 pref_thresh = 100
 
 status_color_map = {
@@ -159,7 +216,7 @@ NUM_RAND_SAMP = {
 }
 
 
-for seed in range(10):
+for seed in range(2,3):
     students = [*real_students]
     RNG = np.random.default_rng(seed)
     status_mbeta_map = {}
@@ -232,8 +289,9 @@ for seed in range(10):
         for student in synth_students:
             student_status_map[student] = status
 
+    creation_order = {s: i for i, s in enumerate(students)}
     students.sort(
-        key=lambda x: (student_status_map[x], str(x))  # deterministic tie-breaker
+        key=lambda x: (student_status_map[x], creation_order[x])
     )
     students = list(reversed(students))
 
@@ -298,7 +356,7 @@ for seed in range(10):
 
     print("run YS")
     start = time.time()
-    X_YS, _, agents_involved = general_yankee_swap_E(students, schedule, valuations=c)
+    X_YS = yankee_swap(students, schedule, valuations=c)
     runtime = time.time() - start
     print(f"YS runtime = {runtime}. Now computing metrics.")
     add_experiment_result(
@@ -322,5 +380,4 @@ for seed in range(10):
         X_RR=X_RR,
         X_YS=X_YS,
         student_type=[student_type_map[students[i]] for i in range(len(students))],
-        agents_involved=agents_involved,
     )
