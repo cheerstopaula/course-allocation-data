@@ -14,8 +14,8 @@ from fair.allocation import (
     integer_linear_program,
 )
 from fair.optimization import StudentAllocationProgram
-from fair.metrics import utilitarian_welfare, nash_welfare
-from fair.envy import EF_violations_reponses
+from fair.welfare_metrics import utilitarian_welfare, nash_welfare
+from fair.fairness_metrics import EF_violations_responses
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 
@@ -125,8 +125,8 @@ def add_experiment_result(
     USW = sum(current_utilities)
     seats = sum(sum(X)[:NUM_STUDENTS])
     zeros, nash = nash_welfare(X, students, schedule, current_utilities)
-    total_envy, status_envy, downward_envy, _ = EF_violations_reponses(
-        X, students, schedule, student_status_map, c
+    total_envy, _, status_envy, _, downward_envy, _, _, _ = EF_violations_responses(
+        X, students, schedule, valuations=c, student_status_map=student_status_map
     )
 
     file_exists = os.path.isfile(csv_file_path)

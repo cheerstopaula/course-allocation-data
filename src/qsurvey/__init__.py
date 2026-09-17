@@ -101,8 +101,8 @@ def synthesize_students(
         if sdata.max() == 1:
             continue
         synth_data.append(sdata)
-    synth_data = np.vstack(synth_data)
-    data = np.vstack([data, synth_data])
+    if synth_data:
+        data = np.vstack([data, np.vstack(synth_data)])
     students = SurveyStudent.from_responses(
         data[num_students:],
         total_course_list,
