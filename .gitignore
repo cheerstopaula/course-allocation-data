@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.DS_Store
+results/
+experiments/
+analysis/
+*.tex
+*.pdf
+*.png
+*.zip

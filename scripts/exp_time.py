@@ -14,12 +14,13 @@ from fair.allocation import (
 )
 import qsurvey
 
+HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "time")  # outputs go to results/time/
+os.makedirs(HERE, exist_ok=True)
+RESOURCES = os.path.join(HERE, "..", "..", "resources")
+
 os.environ["PYTHONHASHSEED"] = "0"
 
-parser = argparse.ArgumentParser()
-parser.add_argument("cohort_size", type=int, help="Target cohort size")
-args = parser.parse_args()
-COHORT_SIZE = args.cohort_size
+COHORT_SIZE = 2000
 
 NUM_SUB_KERNELS = 3
 SAMPLE_PER_STUDENT = 10
@@ -38,10 +39,10 @@ status_crs_prefix_map = {
 FULL_NUM_STUDENTS_PER_STATUS = {1: 239, 2: 327, 3: 408, 4: 573, 5: 613, 6: 148}
 FULL_COHORT = sum(FULL_NUM_STUDENTS_PER_STATUS.values())  # 2308
 
-survey_file = "../resources/survey_data.csv"
-schedule_file = "../resources/anonymized_courses.xlsx"
-mapping_file = "../resources/survey_column_mapping.csv"
-csv_file_path = f"../experiments/time_experiment_{COHORT_SIZE}.csv"
+survey_file = os.path.join(RESOURCES, "survey_data.csv")
+schedule_file = os.path.join(RESOURCES, "anonymized_courses.xlsx")
+mapping_file = os.path.join(RESOURCES, "survey_column_mapping.csv")
+csv_file_path = os.path.join(HERE, "time_experiment.csv")
 
 mp = qsurvey.QMapper(mapping_file)
 qd = qsurvey.QSchedule(schedule_file)
@@ -105,7 +106,7 @@ def save_runtime(NUM_STUDENTS, seed, alg, runtime):
         new_row.to_csv(csv_file_path, mode="w", header=True, index=False)
 
 
-for seed in range(0, 10):
+for seed in range(10):
     RNG = np.random.default_rng(seed)
 
     # Restore original capacities at the start of each iteration

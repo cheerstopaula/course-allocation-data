@@ -1,71 +1,48 @@
+"""Reduced experiment: real students only, sampled per status at the lowest response rate,
+with course capacities scaled by the same rate. Metrics are computed exactly as in exp_full.py. 
+"""
+import os
+import random
+import sys
+import time
+
 import numpy as np
 import pandas as pd
-import copy
-import random
-import time
-import os
 
-from fair.stats.survey import Corpus, SingleTopicSurvey
-from fair.agent import LegacyStudent
 from fair.allocation import (
-    general_yankee_swap_E,
+    yankee_swap,
     round_robin,
     serial_dictatorship,
     integer_linear_program,
 )
-from fair.optimization import StudentAllocationProgram
-from fair.welfare_metrics import utilitarian_welfare, nash_welfare
-from fair.fairness_metrics import EF_violations_responses
-from matplotlib import pyplot as plt
-from sklearn.decomposition import PCA
-
+from fair.welfare_metrics import (
+    utilitarian_welfare,
+    nash_welfare,
+    first_preference_count,
+)
+from fair.fairness_metrics import (
+    EF_violations_responses,
+    EF1_violations_responses,
+    PMMS_violations_responses,
+)
 import qsurvey
 
+HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "reduced")  # outputs go to results/reduced/
+os.makedirs(HERE, exist_ok=True)
+RESOURCES = os.path.join(HERE, "..", "..", "resources")
 
 SPARSE = False
-PLOT = True
-seed = 0
-RNG = np.random.default_rng(seed)
 pref_thresh = 100
 
-status_color_map = {
-    1: "lightsteelblue",
-    2: "blue",
-    3: "forestgreen",
-    4: "darkkhaki",
-    5: "darkorange",
-    6: "red",
-}
-status_max_course_map = {
-    1: 6,
-    2: 6,
-    3: 6,
-    4: 6,
-    5: 4,
-    6: 4,
-}
-status_crs_prefix_map = {
-    1: ["1", "2", "3"],
-    2: ["1", "2", "3", "4"],
-    3: ["1", "2", "3", "4", "5"],
-    4: ["2", "3", "4", "5", "6"],
-    5: ["5", "6"],
-    6: ["5", "6"],
-}
-NUM_STUDENTS_PER_STATUS = {
-    1: 239,
-    2: 327,
-    3: 408,
-    4: 573,
-    5: 613,
-    6: 148,
-}
+status_max_course_map = {1: 6, 2: 6, 3: 6, 4: 6, 5: 4, 6: 4}
+NUM_STUDENTS_PER_STATUS = {1: 239, 2: 327, 3: 408, 4: 573, 5: 613, 6: 148}
 
-# survey_file = "../resources/random_survey.csv"
-survey_file = "../resources/survey_data.csv"
-schedule_file = "../resources/anonymized_courses.xlsx"
-mapping_file = "../resources/survey_column_mapping.csv"
-csv_file_path = "../experiments/reduced_experiment_results_2nd.csv"
+survey_file = os.path.join(RESOURCES, "survey_data.csv")
+schedule_file = os.path.join(RESOURCES, "anonymized_courses.xlsx")
+mapping_file = os.path.join(RESOURCES, "survey_column_mapping.csv")
+data_dir = os.path.join(HERE, "data")
+os.makedirs(data_dir, exist_ok=True)
+csv_file_path = os.path.join(HERE, "reduced_experiment.csv")
 
 mp = qsurvey.QMapper(mapping_file)
 qd = qsurvey.QSchedule(schedule_file)
@@ -87,49 +64,75 @@ students, responses, statuses = qs.students(
 )
 student_status_map = {students[i]: status for i, status in enumerate(statuses)}
 student_resp_map = {students[i]: response for i, response in enumerate(responses)}
-course_cap_map = {
-    crs: crs_sec_cap_map[course_map[crs]["course num"]][int(course_map[crs]["section"])]
-    for crs in all_courses
-}
 all_students = [
     student for student in students if len(student.student.preferred_courses) > 0
 ]
 
 n_responses_per_status = np.zeros(6)
 for student in all_students:
-    student_status = int(student_status_map[student])
-    n_responses_per_status[student_status - 1] += 1
+    n_responses_per_status[int(student_status_map[student]) - 1] += 1
 
 rates = [n_responses_per_status[i] / NUM_STUDENTS_PER_STATUS[i + 1] for i in range(6)]
 rate = min(rates)
-
-n_per_status = [round(NUM_STUDENTS_PER_STATUS[i + 1] * min(rates)) for i in range(6)]
+n_per_status = [round(NUM_STUDENTS_PER_STATUS[i + 1] * rate) for i in range(6)]
 
 for sche in schedule:
     sche.capacity = round(sche.capacity * rate)
 
 
-def add_experiment_result(
-    NUM_STUDENTS,
-    seed,
-    pref_thresh,
-    alg,
-    runtime,
-    X,
-    students,
-    schedule,
-    c,
-    csv_file_path,
-):
-    current_utilities = np.diag(np.dot(c, X))
-    USW = sum(current_utilities)
+def add_experiment_result(NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c):
+    """Same metrics and columns as exp_full.py (plus pref_thresh)."""
+    USW = utilitarian_welfare(X, students, schedule, valuations=c)
     seats = sum(sum(X)[:NUM_STUDENTS])
-    zeros, nash = nash_welfare(X, students, schedule, current_utilities)
-    total_envy, _, status_envy, _, downward_envy, _, _, _ = EF_violations_responses(
+    zeros, nash = nash_welfare(X, students, schedule, valuations=c)
+    first_count = first_preference_count(X, c)
+    (
+        total_envy,
+        num_envious,
+        status_envy,
+        num_status_envious,
+        downward_envy,
+        num_downward_envious,
+        EF_matrix,
+        memo,
+    ) = EF_violations_responses(
         X, students, schedule, valuations=c, student_status_map=student_status_map
     )
-
-    file_exists = os.path.isfile(csv_file_path)
+    (
+        total_ef1,
+        num_ef1_envious,
+        status_ef1,
+        num_status_ef1_envious,
+        downward_ef1,
+        num_downward_ef1_envious,
+        _,
+        _,
+    ) = EF1_violations_responses(
+        X,
+        students,
+        schedule,
+        valuations=c,
+        student_status_map=student_status_map,
+        EF_matrix=EF_matrix,
+        memo=memo,
+    )
+    (
+        total_pmms,
+        num_pmms_envious,
+        status_pmms,
+        num_status_pmms,
+        downward_pmms,
+        num_downward_pmms,
+        _,
+    ) = PMMS_violations_responses(
+        X,
+        students,
+        schedule,
+        valuations=c,
+        student_status_map=student_status_map,
+        EF_matrix=EF_matrix,
+        memo=memo,
+    )
 
     new_row = pd.DataFrame(
         {
@@ -141,20 +144,38 @@ def add_experiment_result(
             "seats": [seats],
             "zeros": [zeros],
             "nash": [nash],
+            "first": [first_count],
             "total_envy": [total_envy],
+            "num_envious": [num_envious],
             "status_envy": [status_envy],
+            "num_status_envious": [num_status_envious],
             "downward_envy": [downward_envy],
+            "num_downward_envious": [num_downward_envious],
+            "total_ef1": [total_ef1],
+            "num_ef1_envious": [num_ef1_envious],
+            "status_ef1": [status_ef1],
+            "num_status_ef1_envious": [num_status_ef1_envious],
+            "downward_ef1": [downward_ef1],
+            "num_downward_ef1_envious": [num_downward_ef1_envious],
+            "total_pmms": [total_pmms],
+            "num_pmms_envious": [num_pmms_envious],
+            "status_pmms": [status_pmms],
+            "num_status_pmms": [num_status_pmms],
+            "downward_pmms": [downward_pmms],
+            "num_downward_pmms": [num_downward_pmms],
             "runtime": [runtime],
         }
     )
+    new_row.to_csv(
+        csv_file_path,
+        mode="a" if os.path.isfile(csv_file_path) else "w",
+        header=not os.path.isfile(csv_file_path),
+        index=False,
+    )
 
-    if file_exists:
-        new_row.to_csv(csv_file_path, mode="a", header=False, index=False)
-    else:
-        new_row.to_csv(csv_file_path, mode="w", header=True, index=False)
 
-
-for seed in range(10, 50):
+for seed in range(100):
+    # Same sampling as the original reduced runs, so a seed draws the same students.
     random.seed(seed)
     reduced_students = []
     for status in range(1, 7):
@@ -166,77 +187,28 @@ for seed in range(10, 50):
 
     students = reduced_students
     NUM_STUDENTS = len(students)
-    print("Num students,", NUM_STUDENTS)
-
     students.sort(key=lambda x: student_status_map[x])
     students.reverse()
-
     c = np.vstack([student_resp_map[student] for student in students]) - 1
+    print(f"seed {seed}: {NUM_STUDENTS} students", flush=True)
 
-    print("run ILP")
-    start = time.time()
-    X_ILP = integer_linear_program(students, schedule, valuations=c)
-    runtime = time.time() - start
-    add_experiment_result(
-        NUM_STUDENTS,
-        seed,
-        pref_thresh,
-        "ILP",
-        runtime,
-        X_ILP,
-        students,
-        schedule,
-        c,
-        csv_file_path,
-    )
+    allocations = {}
+    for alg, run in (
+        ("ILP", lambda: integer_linear_program(students, schedule, valuations=c)),
+        ("SD", lambda: serial_dictatorship(students, schedule, c)),
+        ("RR", lambda: round_robin(students, schedule, c)),
+        ("YS", lambda: yankee_swap(students, schedule, valuations=c)),
+    ):
+        start = time.time()
+        X = run()
+        runtime = time.time() - start
+        add_experiment_result(NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c)
+        allocations[f"X_{alg}"] = X
+        print(f"  {alg}: {runtime:.1f}s", flush=True)
 
-    print("run SD")
-    start = time.time()
-    X_SD = serial_dictatorship(students, schedule, c)
-    runtime = time.time() - start
-    add_experiment_result(
-        NUM_STUDENTS,
-        seed,
-        pref_thresh,
-        "SD",
-        runtime,
-        X_SD,
-        students,
-        schedule,
-        c,
-        csv_file_path,
-    )
-
-    print("run RR")
-    start = time.time()
-    X_RR = round_robin(students, schedule, c)
-    runtime = time.time() - start
-    add_experiment_result(
-        NUM_STUDENTS,
-        seed,
-        pref_thresh,
-        "RR",
-        runtime,
-        X_RR,
-        students,
-        schedule,
-        c,
-        csv_file_path,
-    )
-
-    print("run YS")
-    start = time.time()
-    X_YS_1, _, _ = general_yankee_swap_E(students, schedule, valuations=c)
-    runtime = time.time() - start
-    add_experiment_result(
-        NUM_STUDENTS,
-        seed,
-        pref_thresh,
-        "YS",
-        runtime,
-        X_YS_1,
-        students,
-        schedule,
-        c,
-        csv_file_path,
+    np.savez(
+        f"{data_dir}/data_{seed}.npz",
+        c=c,
+        status=np.array([int(student_status_map[s]) for s in students]),
+        **allocations,
     )

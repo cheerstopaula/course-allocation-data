@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import time
 import os
+import sys
 
 from fair.stats.survey import Corpus, SingleTopicSurvey
 from fair.agent import LegacyStudent
@@ -23,8 +24,11 @@ from fair.fairness_metrics import (
 )
 import qsurvey
 
-os.environ["PYTHONHASHSEED"] = "0"
+HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "full")  # outputs go to results/full/
+os.makedirs(HERE, exist_ok=True)
+RESOURCES = os.path.join(HERE, "..", "..", "resources")
 
+os.environ["PYTHONHASHSEED"] = "0"
 
 def add_experiment_result(
     NUM_STUDENTS,
@@ -169,11 +173,11 @@ NUM_STUDENTS_PER_STATUS = {
     6: 148,
 }
 
-# survey_file = "../resources/random_survey.csv"
-survey_file = "../resources/survey_data.csv"
-schedule_file = "../resources/anonymized_courses.xlsx"
-mapping_file = "../resources/survey_column_mapping.csv"
-csv_file_path = "../experiments/full_experiment.csv"
+survey_file = os.path.join(RESOURCES, "survey_data.csv")
+schedule_file = os.path.join(RESOURCES, "anonymized_courses.xlsx")
+mapping_file = os.path.join(RESOURCES, "survey_column_mapping.csv")
+csv_file_path = os.path.join(HERE, "full_experiment.csv")
+os.makedirs(os.path.join(HERE, "data"), exist_ok=True)
 
 mp = qsurvey.QMapper(mapping_file)
 qd = qsurvey.QSchedule(schedule_file)
@@ -216,7 +220,7 @@ NUM_RAND_SAMP = {
 }
 
 
-for seed in range(2,3):
+for seed in range(100):
     students = [*real_students]
     RNG = np.random.default_rng(seed)
     status_mbeta_map = {}
@@ -290,9 +294,7 @@ for seed in range(2,3):
             student_status_map[student] = status
 
     creation_order = {s: i for i, s in enumerate(students)}
-    students.sort(
-        key=lambda x: (student_status_map[x], creation_order[x])
-    )
+    students.sort(key=lambda x: (student_status_map[x], creation_order[x]))
     students = list(reversed(students))
 
     c = np.vstack([student_resp_map[student] for student in students]) - 1
@@ -373,7 +375,7 @@ for seed in range(2,3):
     print(f"Time to compute metrics: {time.time()-runtime-start}")
 
     np.savez(
-        f"../experiments/data/data_{seed}.npz",
+        os.path.join(HERE, "data", f"data_{seed}.npz"),
         c=c,
         X_ILP=X_ILP,
         X_SD=X_SD,
