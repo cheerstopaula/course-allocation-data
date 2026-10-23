@@ -1,6 +1,7 @@
 """Reduced experiment: real students only, sampled per status at the lowest response rate,
 with course capacities scaled by the same rate. Metrics are computed exactly as in exp_full.py. 
 """
+
 import os
 import random
 import sys
@@ -27,7 +28,9 @@ from fair.fairness_metrics import (
 )
 import qsurvey
 
-HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "reduced")  # outputs go to results/reduced/
+HERE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "results", "reduced"
+)  # outputs go to results/reduced/
 os.makedirs(HERE, exist_ok=True)
 RESOURCES = os.path.join(HERE, "..", "..", "resources")
 
@@ -202,7 +205,9 @@ for seed in range(100):
         start = time.time()
         X = run()
         runtime = time.time() - start
-        add_experiment_result(NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c)
+        add_experiment_result(
+            NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c
+        )
         allocations[f"X_{alg}"] = X
         print(f"  {alg}: {runtime:.1f}s", flush=True)
 

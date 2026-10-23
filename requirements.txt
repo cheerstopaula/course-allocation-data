@@ -1,0 +1,25 @@
+# Python 3.12 (tested with 3.12.8). Versions pinned from the environment used for the paper,
+# except scipy: 1.15.1 (used locally) has a quadratic-time post-processing loop in
+# scipy.optimize.milp that makes the ILP baseline extremely slow for large instances;
+# 1.15.3 fixes that loop and ships the same bundled HiGHS solver.
+numpy==1.26.2
+pandas==2.0.3
+scipy==1.15.3
+networkx==3.1
+matplotlib==3.7.2
+statsmodels==0.14.4
+openpyxl==3.1.2
+# transitive dependencies (pinned for reproducibility)
+contourpy==1.1.0
+cycler==0.11.0
+et-xmlfile==1.1.0
+fonttools==4.42.1
+kiwisolver==1.4.4
+packaging==23.1
+patsy==1.0.1
+Pillow==10.0.0
+pyparsing==3.0.9
+python-dateutil==2.8.2
+pytz==2023.3
+six==1.16.0
+tzdata==2023.3

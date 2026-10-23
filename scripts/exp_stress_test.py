@@ -2,6 +2,7 @@
 Stress-test experiment: fixed course capacities, increasing cohort sizes.
 Cohort sizes to run: 2000 3000 4000 5000 8000 10000
 """
+
 import numpy as np
 import pandas as pd
 import time
@@ -19,7 +20,9 @@ from fair.welfare_metrics import utilitarian_welfare, nash_welfare
 from fair.fairness_metrics import EF_violations_responses, PMMS_violations_responses
 import qsurvey
 
-HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "stress")  # outputs go to results/stress/
+HERE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "results", "stress"
+)  # outputs go to results/stress/
 os.makedirs(HERE, exist_ok=True)
 RESOURCES = os.path.join(HERE, "..", "..", "resources")
 

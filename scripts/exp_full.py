@@ -24,11 +24,14 @@ from fair.fairness_metrics import (
 )
 import qsurvey
 
-HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "full")  # outputs go to results/full/
+HERE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "results", "full"
+)  # outputs go to results/full/
 os.makedirs(HERE, exist_ok=True)
 RESOURCES = os.path.join(HERE, "..", "..", "resources")
 
 os.environ["PYTHONHASHSEED"] = "0"
+
 
 def add_experiment_result(
     NUM_STUDENTS,

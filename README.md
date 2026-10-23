@@ -1,107 +1,108 @@
 # Course Allocation Data
 
-This repository contains data files and Python scripts related to a course preference survey conducted in the UMass Amherst Computer Science department, for the Fall 2024 semester. The survey was designed to gather preferences from students across the Manning College of Information and Computer Sciences (CICS). The repository also includes scripts that process this survey data and simulate course allocation using the Yankee Swap algorithm.
+This repository contains course-preference data collected from students of the Computer Science department at the University of Massachusetts Amherst (Manning College of Information and Computer Sciences, CICS) for the Fall 2024 semester, together with the code that processes the data and runs the course-allocation experiments.
 
-## Survey
-This survey was distributed a few weeks before the official enrollment period, allowing students to voluntarily share their anticipated course selections and scheduling preferences. The survey consisted of the following questions:
-1. Please indicate your current status at UMass: 1: Freshman; 2: Sophomore, 3: Junior, 4: Senior, 5: MS, 6: PhD.
-2. How many CICS classes are you planning to enroll in before the add/drop period of the Fall 2024 semester? (You might want to take more classes than you are planing to keep by the end of the semester)
-3. How many CICS classes are you planning to stay enrolled in after the add/drop period of the Fall 2024 semester?
-4. How many CICS classes are you planning to stay enrolled in after the add/drop period of the Fall 2024 semester?
-5. Are there particular times of the day you would prefer not to have classes? Unselect all time slots that you would want to avoid having classes on
-   
-   5.1. Before 9:00 AM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-   5.2. Between 9:00AM-10:00AM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-
-   5.3. Between 10:00AM-11:00AM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-
-   5.4. Between 11:00AM-12:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-
-   5.5. Between 12:00PM-1:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-
-   5.6. Between 1:00PM-2:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-   5.7. Between 2:00PM-3:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-   5.8. Between 3:00PM-4:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-   5.9. Between 4:00PM-5:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-   5.10. Between 5:00PM-6:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-   5.11. After 6:00PM: 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday
-   
-6. Email Address
-7. Please rank each of the following CICS classes on a scale of 1-7, where 1 is 'not interested' and 7 is 'very interested' If you are interested in a course this semester to fill a major requirement, please select 8.
+The allocation mechanisms (Yankee Swap, Round Robin, Serial Dictatorship, and an integer linear program) and the welfare and fairness metrics are implemented in the [yankee-swap-allocation-framework](https://github.com/cheerstopaula/yankee-swap-allocation-framework) repository, which is installed automatically as a dependency.
 
 ## Contents
 
-The repository has the following structure:
 ```
 .
-├── resources
-    ├── survey_data.csv   
-    ├── random_survey.csv   
-    ├── anonymized_courses.xlsx  
-    └── survey_column_mapping.csv 
-├── scripts
-    ├── generate_random_survey.py   
-    ├── survey_simulation.py
-    └── yankee_swap.py  
-├── src
-    ├── qsurvey  
-        ├── __init__.py
-        └──parser.py
-├── Readme.md
+├── resources/                     # survey responses, course schedule, column mapping
+│   ├── survey_data.csv
+│   ├── anonymized_courses.xlsx
+│   ├── survey_column_mapping.csv
+│   └── random_survey.csv
+├── scripts/                       # experiments (results go to results/<experiment>/, created when a script runs)
+│   ├── exp_full.py                # real + synthetic students (full department scale)
+│   ├── exp_reduced.py             # real students only
+│   ├── exp_stress_test.py         # fixed capacities, growing number of students
+│   └── exp_time.py                # runtime, capacities scaled with the number of students
+├── src/qsurvey/                   # parses the survey and schedule, builds students, generates synthetic students
+├── requirements.txt
 └── pyproject.toml
 ```
-### Data Files
 
-The `resource/` folder contains files with the data corresponding to anonymized students responses and course schedules
+## The survey
 
-- `survey_data.csv`: This file contains 1,063 student responses to the survey questions outlined above. Each response entry includes:
-    - ResponseID: a unique identifier for each response
-    - Finished: indicates whether the survey was fully completed by the respondent
-    - Progress: The completion percentage for each response; and
-    - Duration (in seconds): the time taken by the respondent to complete the survey, measured in seconds
-- `random_survey.csv`: This file contains a small instance of randdomly generated preferences with the same structure as the `survey_data.csv' file
-- `anonymized_courses.xlsx`: This file provides a list of all courses offered in Fall 2024, with anonymized details to protect specific class and instructor identities. Each course entry includes the following information:
-    - Catalog: An anonymized unique identifier for each course (not matching the actual course code)
-    - Subject: The department offering the course, anonymized for privacy
-    - Categories: Specifies the course level as either "Graduate" or "Undergraduate"
-    - Enrl Capacity: The number of seats available in the course
-    - Section: Indicates different sections of the same course (Catalog number), which may vary by schedule or instructor
-    - zc.days: The days of the week the class is scheduled
-    - Mgt Time: The time slot during which the class is held
-    - InstructorPrint: Anonymized teaching staff
-    - Credits: The number of credits the course carries
-- `survey_column_mapping.csv`: A file mapping survey responses to actual course entries in `anonymized_courses.xlsx`
+We invited all undergraduate and graduate students in the department to participate in May 2024, shortly after the final examination period, when students had recently indicated their course preferences for Fall 2024 on the university portal. Participation was voluntary, and the study was approved by the university's Institutional Review Board. The survey consisted of the following questions:
 
-### Scripts
+1. Current status: 1: Freshman, 2: Sophomore, 3: Junior, 4: Senior, 5: MS, 6: PhD.
+2. How many CICS classes are you planning to enroll in before the add/drop period of the Fall 2024 semester? (You might want to take more classes than you are planning to keep by the end of the semester.)
+3. How many CICS classes are you planning to stay enrolled in after the add/drop period of the Fall 2024 semester?
+4. Which categories of courses are you interested in taking? Select all that apply.
+5. Are there particular times of the day you would prefer not to have classes? For each time slot (before 9:00 AM, each hour from 9:00 AM to 6:00 PM, and after 6:00 PM), respondents selected the days (1: Monday, ..., 5: Friday) on which the slot is acceptable.
+6. Email address (used only to pay respondents; **not included in the data**).
+7. For each course offered to the respondent's academic status: rate your interest on a scale from 1 (not interested) to 7 (very interested), or 8 if the course is required for your program.
 
-The `scripts/` folder contains Python scripts to work with survey data and model students based on this data. These scripts rely on the Student class from the [yankee-swap-allocation-framework repository](https://github.com/Fair-and-Explainable-Decision-Making/yankee-swap-allocation-framework). 
+## Data files
 
-- `generate_random_survey.py`: This script generates a random instance of survey data.
-- `survey_simulation.py`: This script generates `Student` instances based on the survey data. For each real survey response, it creates a corresponding `Student` object modeled on that respondent’s answers. Additionally, the script can generate synthetic students by randomly sampling characteristics and preferences from the collected survey data.
-- `yankee_swap.py`: This script runs a course allocation process using the Yankee Swap algorithm implemented in the yankee-swap-allocation-framework repository, leveraging both real and synthetic student data.
-The allocation script takes into account course capacities, time slots, and student preferences.
+- `resources/survey_data.csv`: 1,061 responses. Besides the answers to the questions above (columns `1`–`5` and the course ratings of question 7), each response includes:
+    - `ResponseId`: a unique identifier for each response, assigned by the survey platform;
+    - `Finished`: whether the survey was fully completed;
+    - `Progress`: the completion percentage;
+    - `Duration (in seconds)`: the time taken to complete the survey.
+- `resources/anonymized_courses.xlsx`: the 96 course sections offered in Fall 2024, anonymized so that specific classes and instructors cannot be identified:
+    - `Catalog`: an anonymized identifier for each course (not the actual course number);
+    - `Subject`: the department offering the course (anonymized);
+    - `Categories`: the course level (undergraduate or graduate);
+    - `Enrl Capacity`: the number of seats;
+    - `Section`: the section of the course, which may vary by schedule or instructor;
+    - `zc.days`: the days of the week the class meets;
+    - `Mtg Time`: the time slot of the class;
+    - `InstructorPrint`: the teaching staff (anonymized);
+    - `Credits`: the number of credits.
+- `resources/survey_column_mapping.csv`: maps the survey's columns to questions and course sections in `anonymized_courses.xlsx`.
+- `resources/random_survey.csv`: a small, randomly generated survey with the same structure as `survey_data.csv`, for testing.
 
-## Getting Started
-### Installing Dependencies and Packages
-Use these steps for setting up a development environment to install and work with code in this template:
+## Setup
 
-1) Set up a Python 3 virtual environment using [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html#) or [Virtualenv](https://virtualenv.pypa.io/en/latest/index.html).
+Python 3.10 or later (tested with 3.12).
 
-2) Activate your virtual environment by running `conda acivate your_environment` in a new terminal
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+```
 
-3) Install the requierements by running `pip install -e .`
+`pip install -e .` also installs the `fair` package from the [yankee-swap-allocation-framework](https://github.com/cheerstopaula/yankee-swap-allocation-framework) repository. `requirements.txt` pins the versions we used. Use SciPy 1.15.2 or later (versions 1.15.0 and 1.15.1 have a quadratic-time loop in `scipy.optimize.milp` that makes the ILP extremely slow). 
 
-4) Run any of the scripts by running `python3 scripts/...`
+## Running the experiments
+
+The scripts can be run from any directory:
+
+```bash
+python scripts/exp_<experiment>.py    # <experiment>: full, reduced, stress_test, or time
+```
+
+| Script | Instance | Output in `results/` |
+|---|---|---|
+| `exp_full.py` | All 700 real respondents, complemented with synthetic students to match the department's population (2,308 students) | `full/full_experiment.csv`, `full/data/data_<seed>.npz` |
+| `exp_reduced.py` | Real students only: in each sample, 20.4% of each academic status (471 students), with course capacities scaled by the same rate | `reduced/reduced_experiment.csv`, `reduced/data/data_<seed>.npz` |
+| `exp_stress_test.py` | Real course capacities (7,389 seats), growing number of students (2,000 to 10,000, set by `COHORT_SIZE`) | `stress/stress_experiment.csv` |
+| `exp_time.py` | Course capacities scaled with the number of students (100 to 15,000, set by `COHORT_SIZE`); runtimes only | `time/time_experiment.csv` |
+
+The CSV files contain one row per sample and mechanism, with the welfare and fairness metrics; the `.npz` files contain each sample's valuations and the allocation computed by each mechanism. Rerunning a script appends to its CSV and overwrites the `.npz` files of the seeds it runs, so move previous results aside first.
+
+### Runtimes
+
+Algorithm runtimes per seed on our cluster (AMD EPYC 7763 nodes, medians):
+
+| Instance | ILP | SD | RR | YS |
+|---|---|---|---|---|
+| Real students only (471 students) | 2 s | 2 s | 32 s | 51 s |
+| Full department (2,308 students) | 20 s | 8 s | 168 s | 268 s |
+
+The fairness metrics (envy, and the exact PMMS check) take longer than the allocation algorithms: one full-department seed takes about an hour end to end on a laptop.
+
+## Reproducibility notes
+
+* Yankee Swap, Round Robin, and Serial Dictatorship are deterministic given the instance.
+* Synthetic students are sampled from a kernel density estimate built from multivariate Beta distributions fitted to the real responses of each academic status. The sampling is deterministic on a given platform, but not bit-identical across platforms and numerical-library builds, so results for instances with synthetic students can differ slightly between machines.
+* The ILP may return a different optimal allocation with the same objective value, since ties between optimal solutions are broken by the solver.
+* The exact PMMS check solves an integer program per pair of students; solver tolerances can change a few borderline comparisons.
 
 ## License
-This project is open-source and available under the MIT License.
 
-
-
-
+This project is open source and available under the MIT License.

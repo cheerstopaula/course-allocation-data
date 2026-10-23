@@ -14,7 +14,9 @@ from fair.allocation import (
 )
 import qsurvey
 
-HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "time")  # outputs go to results/time/
+HERE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "results", "time"
+)  # outputs go to results/time/
 os.makedirs(HERE, exist_ok=True)
 RESOURCES = os.path.join(HERE, "..", "..", "resources")
 
