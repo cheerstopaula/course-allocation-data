@@ -103,6 +103,26 @@ The fairness metrics (envy, and the exact PMMS check) take longer than the alloc
 * The ILP may return a different optimal allocation with the same objective value, since ties between optimal solutions are broken by the solver.
 * The exact PMMS check solves an integer program per pair of students; solver tolerances can change a few borderline comparisons.
 
+## Citing
+
+If you use this data or code, please cite the paper that introduces the dataset and the software:
+
+> George Bissias, Cyrus Cousins, Paula Navarrete Diaz, and Yair Zick. *Deploying Fair and Efficient Course Allocation Mechanisms*. arXiv:2502.10592, 2025.
+
+```bibtex
+@misc{bissias2025deploying,
+  title         = {Deploying Fair and Efficient Course Allocation Mechanisms},
+  author        = {Bissias, George and Cousins, Cyrus and Navarrete Diaz, Paula and Zick, Yair},
+  year          = {2025},
+  eprint        = {2502.10592},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.GT},
+  url           = {https://arxiv.org/abs/2502.10592}
+}
+```
+
+This version of the paper predates the extension to non-binary preferences; we will update this reference when the new version is available.
+
 ## License
 
 This project is open source and available under the MIT License.
