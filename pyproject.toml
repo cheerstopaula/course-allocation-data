@@ -36,5 +36,5 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "fair@git+https://github.com/cheerstopaula/yankee-swap-allocation-framework",
+    "fair@git+https://github.com/cheerstopaula/yankee-swap-allocation-framework@aceei-development",
 ]
