@@ -49,25 +49,40 @@ def scale_up_responses(responses, relevant_idxs, n):
 
 
 def top_preferred(course_map, schedule, course, response, pref_thresh):
+    """Sections a student approves: those rated at least as high as their k-th course
+
+    Courses are ranked by the best rating among their sections, with k = pref_thresh,
+    and every section rated at or above the k-th course's rating is approved. A course
+    counts once toward k however many of its sections are rated highly, and courses
+    tied with the k-th are approved too. A rating of 1 (not interested) is never
+    approved, so with fewer than k courses rated above 1, every section rated above 1
+    is approved.
+
+    Args:
+        course_map (dict): Survey question -> course information, in response order
+        schedule (list[ScheduleItem]): Sections, in response order
+        course (Course): Course feature (unused)
+        response (list | np.ndarray): Rating of each section
+        pref_thresh (int): Number of top courses k
+
+    Returns:
+        list[ScheduleItem]: Approved sections, highest rated first
+    """
+    if pref_thresh < 1:
+        return []
+
     all_courses = list(course_map.values())
+    best = {}  # best rating of each course
+    for idx, rating in enumerate(response):
+        course_num = all_courses[idx]["course num"]
+        best[course_num] = max(best.get(course_num, rating), rating)
+    course_ratings = sorted((r for r in best.values() if r > 1), reverse=True)
+    if len(course_ratings) >= pref_thresh:
+        cutoff = course_ratings[pref_thresh - 1]  # the k-th course's rating
+    else:
+        cutoff = -np.inf  # fewer than k courses: every section rated above 1
     order = np.argsort(response)[::-1]
-
-    top_course_nums = set()
-    idxs = []
-
-    for idx in order:
-        if len(top_course_nums) >= pref_thresh or response[idx] == 1:
-            break
-
-        if all_courses[idx]["course num"] not in top_course_nums:
-            same_value_indices = [i for i in order if response[i] == response[idx]]
-            idxs.extend(same_value_indices)
-            top_course_nums.update(
-                all_courses[index]["course num"] for index in same_value_indices
-            )
-
-    preferred_courses = [schedule[j] for j in idxs]
-    return preferred_courses
+    return [schedule[j] for j in order if response[j] > 1 and response[j] >= cutoff]
 
 
 def synthesize_students(
