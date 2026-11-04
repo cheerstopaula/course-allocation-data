@@ -1,5 +1,5 @@
 """Reduced experiment: real students only, sampled per status at the lowest response rate,
-with course capacities scaled by the same rate. Metrics are computed exactly as in exp_full.py. 
+with course capacities scaled by the same rate. Metrics are computed exactly as in exp_full.py.
 """
 
 import os
@@ -35,7 +35,6 @@ os.makedirs(HERE, exist_ok=True)
 RESOURCES = os.path.join(HERE, "..", "..", "resources")
 
 SPARSE = False
-pref_thresh = 100
 
 status_max_course_map = {1: 6, 2: 6, 3: 6, 4: 6, 5: 4, 6: 4}
 NUM_STUDENTS_PER_STATUS = {1: 239, 2: 327, 3: 408, 4: 573, 5: 613, 6: 148}
@@ -62,7 +61,6 @@ students, responses, statuses = qs.students(
     features,
     schedule,
     status_max_course_map,
-    pref_thresh,
     SPARSE,
 )
 student_status_map = {students[i]: status for i, status in enumerate(statuses)}
@@ -84,7 +82,7 @@ for sche in schedule:
 
 
 def add_experiment_result(NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c):
-    """Same metrics and columns as exp_full.py (plus pref_thresh)."""
+    """Same metrics and columns as exp_full.py."""
     USW = utilitarian_welfare(X, students, schedule, valuations=c)
     seats = sum(sum(X)[:NUM_STUDENTS])
     zeros, nash = nash_welfare(X, students, schedule, valuations=c)
@@ -140,7 +138,6 @@ def add_experiment_result(NUM_STUDENTS, seed, alg, runtime, X, students, schedul
     new_row = pd.DataFrame(
         {
             "NUM_STUDENTS": [NUM_STUDENTS],
-            "pref_thresh": [pref_thresh],
             "seed": [seed],
             "alg": [alg],
             "USW": [USW],

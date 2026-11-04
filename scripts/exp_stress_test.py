@@ -38,7 +38,6 @@ SKIP_PMMS = COHORT_SIZE > PMMS_MAX_COHORT
 NUM_SUB_KERNELS = 3
 SAMPLE_PER_STUDENT = 10
 SPARSE = False
-pref_thresh = 100
 
 status_max_course_map = {1: 6, 2: 6, 3: 6, 4: 6, 5: 4, 6: 4}
 status_crs_prefix_map = {
@@ -76,7 +75,6 @@ real_students, responses, statuses = qs.students(
     features,
     schedule,
     status_max_course_map,
-    pref_thresh,
     SPARSE,
 )
 student_status_map = {real_students[i]: status for i, status in enumerate(statuses)}
@@ -113,7 +111,7 @@ def save_row(NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c):
     seats = sum(sum(X)[:n])
     zeros, nash = nash_welfare(X, students, schedule, valuations=c)
 
-    (total_envy, _, status_envy, _, downward_envy, _, EF_matrix, memo) = (
+    total_envy, _, status_envy, _, downward_envy, _, EF_matrix, memo = (
         EF_violations_responses(
             X, students, schedule, valuations=c, student_status_map=student_status_map
         )
@@ -121,7 +119,7 @@ def save_row(NUM_STUDENTS, seed, alg, runtime, X, students, schedule, c):
 
     total_pmms = downward_pmms = np.nan
     if not SKIP_PMMS:
-        (total_pmms, _, _, _, downward_pmms, _, _) = PMMS_violations_responses(
+        total_pmms, _, _, _, downward_pmms, _, _ = PMMS_violations_responses(
             X,
             students,
             schedule,
@@ -215,7 +213,6 @@ for seed in range(10):
                     status, all_courses, course_map, status_crs_prefix_map
                 ),
                 rng=RNG,
-                pref_thresh=pref_thresh,
                 total_course_list=[
                     s.student.total_courses for s in status_students_map[status]
                 ],

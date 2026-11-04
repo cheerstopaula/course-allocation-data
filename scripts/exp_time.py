@@ -27,7 +27,6 @@ COHORT_SIZE = 2000
 NUM_SUB_KERNELS = 3
 SAMPLE_PER_STUDENT = 10
 SPARSE = False
-pref_thresh = 100
 
 status_max_course_map = {1: 6, 2: 6, 3: 6, 4: 6, 5: 4, 6: 4}
 status_crs_prefix_map = {
@@ -61,7 +60,6 @@ real_students, responses, statuses = qs.students(
     features,
     schedule,
     status_max_course_map,
-    pref_thresh,
     SPARSE,
 )
 student_status_map = {real_students[i]: status for i, status in enumerate(statuses)}
@@ -172,7 +170,6 @@ for seed in range(10):
                     status, all_courses, course_map, status_crs_prefix_map
                 ),
                 rng=RNG,
-                pref_thresh=pref_thresh,
                 total_course_list=[
                     s.student.total_courses for s in status_students_map[status]
                 ],

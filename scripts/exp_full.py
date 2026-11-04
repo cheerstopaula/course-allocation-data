@@ -141,7 +141,6 @@ NUM_SUB_KERNELS = 3
 SAMPLE_PER_STUDENT = 10
 SPARSE = False
 PLOT = True
-pref_thresh = 100
 
 status_color_map = {
     1: "lightsteelblue",
@@ -197,7 +196,6 @@ real_students, responses, statuses = qs.students(
     features,
     schedule,
     status_max_course_map,
-    pref_thresh,
     SPARSE,
 )
 student_status_map = {real_students[i]: status for i, status in enumerate(statuses)}
@@ -275,7 +273,6 @@ for seed in range(100):
                 status, all_courses, course_map, status_crs_prefix_map
             ),
             rng=RNG,
-            pref_thresh=pref_thresh,
             total_course_list=[
                 student.student.total_courses for student in status_students_map[status]
             ],

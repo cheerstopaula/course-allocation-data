@@ -48,14 +48,14 @@ def scale_up_responses(responses, relevant_idxs, n):
     return new_responses
 
 
-def top_preferred(course_map, schedule, course, response, pref_thresh):
-    """Sections a student approves: those rated at least as high as their k-th course
+def top_preferred(course_map, schedule, course, response, pref_thresh=None):
+    """Sections a student approves: every section rated above 1 (not interested)
 
-    Courses are ranked by the best rating among their sections, with k = pref_thresh,
-    and every section rated at or above the k-th course's rating is approved. A course
-    counts once toward k however many of its sections are rated highly, and courses
-    tied with the k-th are approved too. A rating of 1 (not interested) is never
-    approved, so with fewer than k courses rated above 1, every section rated above 1
+    With pref_thresh = k, only the student's top k courses are approved instead:
+    courses are ranked by the best rating among their sections, and every section rated
+    at or above the k-th course's rating is approved. A course counts once toward k
+    however many of its sections are rated highly, and courses tied with the k-th are
+    approved too. With fewer than k courses rated above 1, every section rated above 1
     is approved.
 
     Args:
@@ -63,12 +63,13 @@ def top_preferred(course_map, schedule, course, response, pref_thresh):
         schedule (list[ScheduleItem]): Sections, in response order
         course (Course): Course feature (unused)
         response (list | np.ndarray): Rating of each section
-        pref_thresh (int): Number of top courses k
+        pref_thresh (int, optional): Number of top courses k. Defaults to None (no
+            limit).
 
     Returns:
         list[ScheduleItem]: Approved sections, highest rated first
     """
-    if pref_thresh < 1:
+    if pref_thresh is not None and pref_thresh < 1:
         return []
 
     all_courses = list(course_map.values())
@@ -77,10 +78,10 @@ def top_preferred(course_map, schedule, course, response, pref_thresh):
         course_num = all_courses[idx]["course num"]
         best[course_num] = max(best.get(course_num, rating), rating)
     course_ratings = sorted((r for r in best.values() if r > 1), reverse=True)
-    if len(course_ratings) >= pref_thresh:
+    if pref_thresh is not None and len(course_ratings) >= pref_thresh:
         cutoff = course_ratings[pref_thresh - 1]  # the k-th course's rating
     else:
-        cutoff = -np.inf  # fewer than k courses: every section rated above 1
+        cutoff = -np.inf  # no limit, or fewer than k courses: all rated above 1
     order = np.argsort(response)[::-1]
     return [schedule[j] for j in order if response[j] > 1 and response[j] >= cutoff]
 
@@ -98,8 +99,8 @@ def synthesize_students(
     max_courses,
     relevant_idxs,
     rng,
-    pref_thresh,
     total_course_list,
+    pref_thresh=None,
 ):
     num_students = len(surveys)
     data = np.vstack([survey.data() for survey in surveys])
@@ -150,10 +151,10 @@ class SurveyStudent(BaseAgent):
         global_constraints: list[LinearConstraint],
         schedule: list[ScheduleItem],
         rng: np.random.Generator,
-        pref_thresh: int,
         max_total_courses: int = sys.maxsize,
         sparse: bool = False,
         memoize: bool = True,
+        pref_thresh: int = None,
     ):
         """Create list of SurveyStudents from response vector and schedule of same dimension
 
@@ -169,10 +170,10 @@ class SurveyStudent(BaseAgent):
             global_constraints (list[LinearConstraint]): Previously constructed global constraints
             schedule (list[ScheduleItem]): A list of items corresponding to responses
             rng (np.random.Generator): Random number generator
-            threshold (int, optional): What response value constitutes a preference for the item. Defaults to 1.
             max_total_courses (int, optional): Total courses that can be assigned to the student. Defaults to sys.maxsize.
             sparse (bool, optional): Should sparse matrices be used for constraints. Defaults to False.
             memoize (bool, optional): Should results be cached. Defaults to True.
+            pref_thresh (int, optional): Approve only each student's top pref_thresh courses, as in top_preferred. Defaults to None (every section rated above 1).
 
         Returns:
             list[SurveyStudent]: A list of SurveyStudents constructed from responses
@@ -312,8 +313,8 @@ class QSurvey:
         features,
         schedule,
         status_max_course_map,
-        pref_thresh,
         sparse=False,
+        pref_thresh=None,
     ):
         course, _, _, section = features
 
