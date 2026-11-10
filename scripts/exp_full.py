@@ -1,3 +1,13 @@
+"""Full experiment: real respondents plus synthetic students, at the department's size.
+
+Usage: python scripts/exp_full.py [START END]
+
+Runs seeds START, ..., END - 1 (default: all 100, 0 to 99) and writes their rows to
+results/full/full_experiment_seeds_START_END.csv (results/full/full_experiment.csv when
+run on all seeds), so parallel jobs on disjoint seed ranges never write to the same file.
+Allocations go to results/full/data/data_<seed>.npz.
+"""
+
 import numpy as np
 import pandas as pd
 import time
@@ -178,7 +188,13 @@ NUM_STUDENTS_PER_STATUS = {
 survey_file = os.path.join(RESOURCES, "survey_data.csv")
 schedule_file = os.path.join(RESOURCES, "anonymized_courses.xlsx")
 mapping_file = os.path.join(RESOURCES, "survey_column_mapping.csv")
-csv_file_path = os.path.join(HERE, "full_experiment.csv")
+START, END = (int(arg) for arg in sys.argv[1:3]) if len(sys.argv) > 1 else (0, 100)
+csv_name = (
+    "full_experiment.csv"
+    if (START, END) == (0, 100)
+    else f"full_experiment_seeds_{START}_{END}.csv"
+)
+csv_file_path = os.path.join(HERE, csv_name)
 os.makedirs(os.path.join(HERE, "data"), exist_ok=True)
 
 mp = qsurvey.QMapper(mapping_file)
@@ -221,7 +237,7 @@ NUM_RAND_SAMP = {
 }
 
 
-for seed in range(100):
+for seed in range(START, END):
     students = [*real_students]
     RNG = np.random.default_rng(seed)
     status_mbeta_map = {}
